@@ -1,0 +1,22 @@
+services:
+  nutrient:
+    image: pspdfkit/document-engine:1.12
+    environment:
+      PORT: 5125
+      API_AUTH_TOKEN: secret
+      DASHBOARD_USERNAME: admin
+      DASHBOARD_PASSWORD: admin
+      LOG_LEVEL: info
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: admin
+      PGPASSWORD: admin
+      PGDATABASE: nutrient
+    network_mode: host
+  nutrient-db:
+    image: postgres:16.6
+    network_mode: host
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: nutrient
