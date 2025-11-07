@@ -1,0 +1,88 @@
+name: Nutrient CI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-nutrient:
+    runs-on: ubuntu-latest
+
+    services:
+      nutrient-db:
+        image: postgres:16.6
+        env:
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: admin
+          POSTGRES_DB: nutrient
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U admin -d nutrient"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+      nutrient:
+        image: pspdfkit/document-engine:1.12
+        env:
+          PORT: 5125
+          ACTIVATION_KEY: ${{ secrets.ACTIVATION_KEY }}
+          API_AUTH_TOKEN: secret
+          DASHBOARD_USERNAME: admin
+          DASHBOARD_PASSWORD: admin
+          LOG_LEVEL: info
+          PGHOST: nutrient-db
+          PGPORT: 5432
+          PGUSER: admin
+          PGPASSWORD: admin
+          PGDATABASE: nutrient
+        ports:
+          - 5125:5125
+        options: >-
+          --health-cmd="bash -c 'curl -fsS http://localhost:5125/ || exit 1'"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=30
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Wait for Postgres to be healthy
+        run: |
+          for i in {1..60}; do
+            if docker inspect --format='{{json .State.Health.Status}}' "$HOSTNAME-nutrient-db" 2>/dev/null | grep -q healthy; then
+              echo "Postgres is healthy"
+              exit 0
+            fi
+            echo "Waiting for Postgres... ($i/60)"
+            sleep 2
+          done
+          echo "Postgres did not become healthy in time" >&2
+          exit 1
+
+      - name: Wait for Document Engine to be reachable
+        run: |
+          for i in {1..90}; do
+            if curl -fsS http://localhost:5125/ >/dev/null; then
+              echo "Document Engine is up"
+              exit 0
+            fi
+            echo "Waiting for Document Engine... ($i/90)"
+            sleep 2
+          done
+          echo "Document Engine did not become reachable in time" >&2
+          docker logs "$HOSTNAME-nutrient" || true
+          exit 1
+
+      - name: Ensure curl.sh is executable
+        run: chmod +x ./curl.sh
+
+      - name: Run curl.sh
+        run: ./curl.sh
+
+      - name: Upload generated PDF as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: curl-pdf
+          path: ./output/curl.pdf
