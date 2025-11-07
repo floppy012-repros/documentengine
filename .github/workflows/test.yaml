@@ -48,33 +48,6 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v4
 
-      - name: Wait for Postgres to be healthy
-        run: |
-          for i in {1..60}; do
-            if docker inspect --format='{{json .State.Health.Status}}' "$HOSTNAME-nutrient-db" 2>/dev/null | grep -q healthy; then
-              echo "Postgres is healthy"
-              exit 0
-            fi
-            echo "Waiting for Postgres... ($i/60)"
-            sleep 2
-          done
-          echo "Postgres did not become healthy in time" >&2
-          exit 1
-
-      - name: Wait for Document Engine to be reachable
-        run: |
-          for i in {1..90}; do
-            if curl -fsS http://localhost:5125/ >/dev/null; then
-              echo "Document Engine is up"
-              exit 0
-            fi
-            echo "Waiting for Document Engine... ($i/90)"
-            sleep 2
-          done
-          echo "Document Engine did not become reachable in time" >&2
-          docker logs "$HOSTNAME-nutrient" || true
-          exit 1
-
       - name: Ensure curl.sh is executable
         run: chmod +x ./curl.sh
 
