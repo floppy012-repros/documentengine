@@ -60,5 +60,5 @@ jobs:
       - name: Upload generated PDF as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: curl-pdf
+          name: curl-pdf-de-${{ matrix.version }}
           path: ./output/curl.pdf
