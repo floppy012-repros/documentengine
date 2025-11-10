@@ -6,6 +6,9 @@ on:
 jobs:
   run-nutrient:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version: ['1.12', nightly]
 
     services:
       nutrient-db:
@@ -23,7 +26,7 @@ jobs:
           --health-retries=10
 
       nutrient:
-        image: pspdfkit/document-engine:1.12
+        image: pspdfkit/document-engine:${{ matrix.version }}
         env:
           PORT: 5125
           ACTIVATION_KEY: ${{ secrets.ACTIVATION_KEY }}
